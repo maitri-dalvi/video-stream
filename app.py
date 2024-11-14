@@ -9,9 +9,23 @@ def generate_frames():
         ## read the camera frame
         success,frame=camera.read()
         if not success:
-            print("falied")
+            print("failed")
             break
         else:
+            detector=cv2.CascadeClassifier('Haarcascades/haarcascade_frontalface_default.xml')
+            eye_cascade = cv2.CascadeClassifier('Haarcascades/haarcascade_eye.xml')
+            faces=detector.detectMultiScale(frame,1.1,7)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            for (x, y, w, h) in faces:
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                roi_gray = gray[y:y+h, x:x+w]
+                roi_color = frame[y:y+h, x:x+w]
+                eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 3)
+                for (ex, ey, ew, eh) in eyes:
+                    cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
+
+            
             ret,buffer=cv2.imencode('.jpg',frame)
             frame=buffer.tobytes()
         yield(b'--frame\r\n'
@@ -23,9 +37,10 @@ def generate_frames():
 def index():
     return render_template('index.html')
 
-@app.route('/video')
-def video():
+@app.route('/video_feed')
+def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__=="__main__":
     app.run(debug=True)
+    
